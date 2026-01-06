@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Laptop, Monitor, Keyboard, Mouse, Smartphone, Headphones, Camera, Cable, ArrowLeft, Send } from "lucide-react";
+import {
+  Laptop,
+  Monitor,
+  Keyboard,
+  Mouse,
+  Smartphone,
+  Headphones,
+  Camera,
+  Cable,
+  ArrowLeft,
+  Send,
+} from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +23,11 @@ import { useToast } from "@/hooks/use-toast";
 import { AssetType } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
 
-const assetTypes: { type: AssetType; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
+const assetTypes: {
+  type: AssetType;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}[] = [
   { type: "Laptop", icon: Laptop, description: "Portable computer" },
   { type: "Monitor", icon: Monitor, description: "Display screen" },
   { type: "Keyboard", icon: Keyboard, description: "Input device" },
@@ -64,7 +79,9 @@ export default function RequestAsset() {
       <div className="max-w-3xl">
         {/* Asset Type Selection */}
         <div className="mb-8">
-          <Label className="text-base font-medium mb-4 block">Select Asset Type</Label>
+          <Label className="text-base font-medium mb-4 block">
+            Select Asset Type
+          </Label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {assetTypes.map(({ type, icon: Icon, description }) => (
               <button
@@ -77,14 +94,20 @@ export default function RequestAsset() {
                     : "border-border hover:border-primary/50 hover:bg-secondary/50"
                 )}
               >
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
-                  selectedType === type ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                )}>
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                    selectedType === type
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground"
+                  )}
+                >
                   <Icon className="w-5 h-5" />
                 </div>
                 <span className="text-sm font-medium">{type}</span>
-                <span className="text-xs text-muted-foreground">{description}</span>
+                <span className="text-xs text-muted-foreground">
+                  {description}
+                </span>
               </button>
             ))}
           </div>
@@ -93,12 +116,20 @@ export default function RequestAsset() {
         {/* Priority Selection */}
         <Card className="mb-6">
           <CardContent className="p-5">
-            <Label className="text-base font-medium mb-4 block">Priority Level</Label>
-            <RadioGroup value={priority} onValueChange={setPriority} className="flex gap-4">
+            <Label className="text-base font-medium mb-4 block">
+              Priority Level
+            </Label>
+            <RadioGroup
+              value={priority}
+              onValueChange={setPriority}
+              className="flex gap-4"
+            >
               {["Low", "Medium", "High"].map((level) => (
                 <div key={level} className="flex items-center space-x-2">
                   <RadioGroupItem value={level} id={level} />
-                  <Label htmlFor={level} className="cursor-pointer">{level}</Label>
+                  <Label htmlFor={level} className="cursor-pointer">
+                    {level}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
@@ -108,7 +139,10 @@ export default function RequestAsset() {
         {/* Reason */}
         <Card className="mb-6">
           <CardContent className="p-5">
-            <Label htmlFor="reason" className="text-base font-medium mb-4 block">
+            <Label
+              htmlFor="reason"
+              className="text-base font-medium mb-4 block"
+            >
               Reason for Request
             </Label>
             <Textarea

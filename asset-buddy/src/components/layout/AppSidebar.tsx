@@ -15,6 +15,7 @@ import {
   Smartphone,
   Headphones,
   AlertCircle,
+  History
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ interface NavItem {
 }
 
 const employeeNav: NavItem[] = [
-  { title: "My Assets", url: "/", icon: LayoutDashboard },
+  { title: "My Assets", url: "/my-assets", icon: LayoutDashboard },
   { title: "Request Asset", url: "/request", icon: FileText },
   { title: "My Requests", url: "/my-requests", icon: Package },
   { title: "Complaints", url: "/my-complaints", icon: AlertCircle },
@@ -37,6 +38,7 @@ const adminNav: NavItem[] = [
   { title: "Inventory", url: "/admin/inventory", icon: Package },
   { title: "Requests", url: "/admin/requests", icon: FileText, badge: 3 },
   { title: "Employees", url: "/admin/employees", icon: Users },
+  { title: "Asset History", url: "/admin/asset-history", icon: History }
 ];
 
 interface AppSidebarProps {

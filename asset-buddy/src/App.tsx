@@ -15,9 +15,13 @@ import Inventory from "./pages/admin/Inventory";
 import Requests from "./pages/admin/Requests";
 import Employees from "./pages/admin/Employees";
 
+// Other pages
 import NotFound from "./pages/NotFound";
 import MyComplaints from "./pages/employee/MyComplaints";
 import SubmitComplaint from "./pages/employee/SubmitComplaint";
+import Login from "./pages/Login";
+import Index from "./pages/Index";
+import AssetHistory from "./pages/admin/AssetHistory";
 
 const queryClient = new QueryClient();
 
@@ -28,8 +32,14 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Default redirect to login */}
+          <Route path="/" element={<Index />} />
+
+          {/* Login */}
+          <Route path="/login" element={<Login />} />
+
           {/* Employee Routes */}
-          <Route path="/" element={<MyAssets />} />
+          <Route path="/my-assets" element={<MyAssets />} />
           <Route path="/request" element={<RequestAsset />} />
           <Route path="/my-requests" element={<MyRequests />} />
           <Route path="/my-complaints" element={<MyComplaints />} />
@@ -40,7 +50,9 @@ const App = () => (
           <Route path="/admin/inventory" element={<Inventory />} />
           <Route path="/admin/requests" element={<Requests />} />
           <Route path="/admin/employees" element={<Employees />} />
+          <Route path="/admin/asset-history" element={<AssetHistory />} />
 
+          {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
