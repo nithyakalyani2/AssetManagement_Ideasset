@@ -24,7 +24,7 @@ export interface Asset {
   assignedDate?: string;
   purchaseDate: string;
   serialNumber: string;
-  condition: 'New' | 'Good' | 'Fair' | 'Repair';
+  condition: 'New' | 'Good' | 'Repair';
 }
 
 export interface AssetRequest {
@@ -118,3 +118,12 @@ export const complaints: Complaint[] = [
 ];
 
 export const currentEmployee = employees[0]; // Sarah Chen as the logged-in employee
+
+export const deviceBrands = ["Dell", "HP", "Apple", "Lenovo"];
+
+export const deviceModels = {
+  Dell: ["Latitude 5420", "XPS 13"],
+  HP: ["EliteBook 840", "ProBook 450"],
+  Apple: ["MacBook Air M1", "MacBook Pro M2"],
+  Lenovo: ["ThinkPad T14", "ThinkPad X1"],
+};

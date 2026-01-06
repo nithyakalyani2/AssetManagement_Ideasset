@@ -152,7 +152,7 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
         <NavLink
-          to={isAdmin ? "/" : "/admin"}
+          to={isAdmin ? "/my-assets" : "/admin"}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-sidebar-accent transition-colors"
         >
           <Settings className="w-5 h-5" />

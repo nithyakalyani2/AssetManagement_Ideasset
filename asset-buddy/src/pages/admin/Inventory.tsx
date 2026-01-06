@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Search, Plus, Grid, List } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -40,6 +40,14 @@ export default function Inventory() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [openDialog, setOpenDialog] = useState(false);
 
+  const generatedAssetId = useMemo(
+    () =>
+      `AST-${Math.floor(Math.random() * 10000)
+        .toString()
+        .padStart(4, "0")}`,
+    [openDialog]
+  );
+
   const [newAsset, setNewAsset] = useState<Omit<Asset, "id" | "assetId">>({
     type: "Laptop",
     brand: "",
@@ -63,31 +71,30 @@ export default function Inventory() {
     "Docking Station",
   ];
 
+  const brands = ["Dell", "HP", "Apple", "Lenovo"];
+  const modelsByBrand: Record<string, string[]> = {
+    Dell: ["Latitude 5420", "XPS 13"],
+    HP: ["EliteBook 840", "ProBook 450"],
+    Apple: ["MacBook Air M1", "MacBook Pro M2"],
+    Lenovo: ["ThinkPad T14", "ThinkPad X1"],
+  };
+
   const filteredAssets = assets.filter((asset) => {
     const q = search.toLowerCase();
-
-    const matchesSearch =
-      asset.assetId.toLowerCase().includes(q) ||
-      asset.brand.toLowerCase().includes(q) ||
-      asset.model.toLowerCase().includes(q) ||
-      asset.assignedTo?.name.toLowerCase().includes(q);
-
-    const matchesStatus =
-      statusFilter === "all" || asset.status === statusFilter;
-
-    const matchesType = typeFilter === "all" || asset.type === typeFilter;
-
-    return matchesSearch && matchesStatus && matchesType;
+    return (
+      (asset.assetId.toLowerCase().includes(q) ||
+        asset.brand.toLowerCase().includes(q) ||
+        asset.model.toLowerCase().includes(q) ||
+        asset.assignedTo?.name.toLowerCase().includes(q)) &&
+      (statusFilter === "all" || asset.status === statusFilter) &&
+      (typeFilter === "all" || asset.type === typeFilter)
+    );
   });
 
   const handleAddAsset = () => {
-    const assetId = `AST-${Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0")}`;
-
     const newEntry: Asset = {
       id: crypto.randomUUID(),
-      assetId,
+      assetId: generatedAssetId,
       ...newAsset,
     };
 
@@ -120,19 +127,19 @@ export default function Inventory() {
       />
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Add New Asset</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Asset ID</label>
-              <Input value="Auto Generated" disabled />
+              <label className="text-sm font-medium mb-8">Asset ID</label>
+              <Input value={generatedAssetId} disabled />
             </div>
 
             <div>
-              <label className="text-sm font-medium">Device Type</label>
+              <label className="text-sm font-medium mb-8">Device Type</label>
               <Select
                 value={newAsset.type}
                 onValueChange={(v) =>
@@ -153,40 +160,69 @@ export default function Inventory() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Brand</label>
-              <Input
+              <label className="text-sm font-medium mb-8">Brand</label>
+              <Select
                 value={newAsset.brand}
-                onChange={(e) =>
-                  setNewAsset({ ...newAsset, brand: e.target.value })
+                onValueChange={(v) =>
+                  setNewAsset({ ...newAsset, brand: v, model: "" })
                 }
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map((b) => (
+                    <SelectItem key={b} value={b}>
+                      {b}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
-              <label className="text-sm font-medium">Model</label>
-              <Input
+              <label className="text-sm font-medium mb-8">Model</label>
+              <Select
                 value={newAsset.model}
-                onChange={(e) =>
-                  setNewAsset({ ...newAsset, model: e.target.value })
-                }
-              />
+                onValueChange={(v) => setNewAsset({ ...newAsset, model: v })}
+                disabled={!newAsset.brand}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(modelsByBrand[newAsset.brand] || []).map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
-              <label className="text-sm font-medium">Serial Number</label>
+              <label className="text-sm font-medium mb-8">Serial Number</label>
               <Input
                 value={newAsset.serialNumber}
                 onChange={(e) =>
-                  setNewAsset({
-                    ...newAsset,
-                    serialNumber: e.target.value,
-                  })
+                  setNewAsset({ ...newAsset, serialNumber: e.target.value })
                 }
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium mb-8">Purchase Date</label>
+              <Input
+                type="date"
+                value={newAsset.purchaseDate}
+                onChange={(e) =>
+                  setNewAsset({ ...newAsset, purchaseDate: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-8">Status</label>
               <Select
                 value={newAsset.status}
                 onValueChange={(v) =>
@@ -198,28 +234,14 @@ export default function Inventory() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="repair">Repair</SelectItem>
+                  <SelectItem value="repair">Under Repair</SelectItem>
                   <SelectItem value="retired">Retired</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <label className="text-sm font-medium">Purchase Date</label>
-              <Input
-                type="date"
-                value={newAsset.purchaseDate}
-                onChange={(e) =>
-                  setNewAsset({
-                    ...newAsset,
-                    purchaseDate: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Condition</label>
+              <label className="text-sm font-medium mb-8">Condition</label>
               <Select
                 value={newAsset.condition}
                 onValueChange={(v) =>
@@ -235,7 +257,6 @@ export default function Inventory() {
                 <SelectContent>
                   <SelectItem value="New">New</SelectItem>
                   <SelectItem value="Good">Good</SelectItem>
-                  <SelectItem value="Fair">Fair</SelectItem>
                   <SelectItem value="Repair">Repair</SelectItem>
                 </SelectContent>
               </Select>
