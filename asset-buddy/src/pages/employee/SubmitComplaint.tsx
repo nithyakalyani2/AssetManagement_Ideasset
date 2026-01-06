@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, AlertTriangle, Laptop, Wifi, Key, HelpCircle, Monitor } from "lucide-react";
+import { ArrowLeft, Send, AlertTriangle, Laptop, Wifi, Key, HelpCircle, Monitor, ImagePlus, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { assets, currentEmployee, ComplaintCategory } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
-
+ 
 const categories: { type: ComplaintCategory; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
   { type: "Hardware Issue", icon: Laptop, description: "Device problems" },
   { type: "Software Issue", icon: Monitor, description: "App or system issues" },
@@ -27,7 +27,7 @@ const categories: { type: ComplaintCategory; icon: React.ComponentType<{ classNa
   { type: "Access Issue", icon: Key, description: "Permission problems" },
   { type: "Other", icon: HelpCircle, description: "Other IT issues" },
 ];
-
+ 
 export default function SubmitComplaint() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -36,9 +36,50 @@ export default function SubmitComplaint() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>("Medium");
   const [relatedAsset, setRelatedAsset] = useState<string>("");
-
+ 
   const myAssets = assets.filter(asset => asset.assignedTo?.id === currentEmployee.id);
-
+ 
+  // Image upload state and handlers
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+ 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+ 
+    const file = files[0];
+ 
+    // Validate file type
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Only JPG, JPEG, and PNG files are allowed.",
+        variant: "destructive",
+      });
+      return;
+    }
+ 
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File Too Large",
+        description: "File size must be less than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+ 
+    setUploadedImages(prev => [...prev, file]);
+    // Reset input so the same file can be selected again
+    e.target.value = '';
+  };
+ 
+  const removeImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+ 
   const handleSubmit = () => {
     if (!selectedCategory || !subject.trim() || !description.trim()) {
       toast({
@@ -48,7 +89,7 @@ export default function SubmitComplaint() {
       });
       return;
     }
-
+ 
     if (subject.length > 100) {
       toast({
         title: "Subject too long",
@@ -57,7 +98,7 @@ export default function SubmitComplaint() {
       });
       return;
     }
-
+ 
     if (description.length > 1000) {
       toast({
         title: "Description too long",
@@ -66,15 +107,15 @@ export default function SubmitComplaint() {
       });
       return;
     }
-
+ 
     toast({
       title: "Complaint Submitted",
       description: "Your complaint has been submitted. We'll get back to you soon.",
     });
-
+ 
     navigate("/my-complaints");
   };
-
+ 
   return (
     <MainLayout>
       <PageHeader
@@ -87,7 +128,7 @@ export default function SubmitComplaint() {
           </Button>
         }
       />
-
+ 
       <div className="max-w-3xl space-y-6">
         {/* Category Selection */}
         <Card>
@@ -120,7 +161,58 @@ export default function SubmitComplaint() {
             </div>
           </CardContent>
         </Card>
-
+ 
+        {/* Image Upload */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Upload Image (Optional)</CardTitle>
+            <CardDescription>Attach screenshots or photos related to the issue (JPG, JPEG, PNG - Max 5MB)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".jpg,.jpeg,.png"
+              className="hidden"
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 cursor-pointer hover:border-primary/50 hover:bg-secondary/30 transition-all duration-200 flex flex-col items-center justify-center gap-3"
+            >
+              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                <ImagePlus className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">Click to upload an image</p>
+                <p className="text-xs text-muted-foreground mt-1">JPG, JPEG, PNG up to 5MB</p>
+              </div>
+            </div>
+ 
+            {/* Preview uploaded images */}
+            {uploadedImages.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                {uploadedImages.map((file, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={`Upload ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg border"
+                    />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+ 
         {/* Subject */}
         <Card>
           <CardHeader>
@@ -137,7 +229,7 @@ export default function SubmitComplaint() {
             <p className="text-xs text-muted-foreground mt-2">{subject.length}/100 characters</p>
           </CardContent>
         </Card>
-
+ 
         {/* Description */}
         <Card>
           <CardHeader>
@@ -156,7 +248,7 @@ export default function SubmitComplaint() {
             <p className="text-xs text-muted-foreground mt-2">{description.length}/1000 characters</p>
           </CardContent>
         </Card>
-
+ 
         {/* Related Asset */}
         {myAssets.length > 0 && (
           <Card>
@@ -181,7 +273,7 @@ export default function SubmitComplaint() {
             </CardContent>
           </Card>
         )}
-
+ 
         {/* Priority */}
         <Card>
           <CardHeader>
@@ -206,7 +298,7 @@ export default function SubmitComplaint() {
             </RadioGroup>
           </CardContent>
         </Card>
-
+ 
         {/* Submit */}
         <div className="flex gap-3">
           <Button onClick={handleSubmit} className="flex-1">

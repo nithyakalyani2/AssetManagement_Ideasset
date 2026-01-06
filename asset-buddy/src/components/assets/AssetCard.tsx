@@ -39,7 +39,7 @@ const assetIcons: Record<
 };
 
 interface AssetCardProps {
-  asset: Asset;
+  asset: any;
   onClick?: () => void;
   compact?: boolean;
 }
@@ -100,7 +100,7 @@ export function AssetCard({ asset, onClick, compact = false }: AssetCardProps) {
         )}
         onClick={onClick}
       >
-        <CardContent className="p-5 flex flex-col h-full">
+        <CardContent className="p-5">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
               <Icon className="w-6 h-6 text-muted-foreground" />
@@ -111,21 +111,21 @@ export function AssetCard({ asset, onClick, compact = false }: AssetCardProps) {
           <h3 className="font-semibold text-foreground mb-1">
             {asset.brand} {asset.model}
           </h3>
-          <p className="text-sm text-muted-foreground mb-4">{asset.type}</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            {asset.deviceType}
+          </p>
 
-          <div className="space-y-2 text-sm mb-5">
+          <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Asset ID</span>
-              <span className="font-medium">{asset.assetId}</span>
+              <span className="font-medium">{asset.id}</span>
             </div>
-
             {asset.assignedTo && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Assigned to</span>
                 <span className="font-medium">{asset.assignedTo.name}</span>
               </div>
             )}
-
             {asset.assignedDate && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Since</span>
@@ -134,32 +134,64 @@ export function AssetCard({ asset, onClick, compact = false }: AssetCardProps) {
                 </span>
               </div>
             )}
-
             <div className="flex justify-between">
               <span className="text-muted-foreground">Condition</span>
               <span className="font-medium">{asset.condition}</span>
             </div>
-          </div>
 
-          <div className="mt-auto grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpenReturn(true);
-              }}
-            >
-              Return
-            </Button>
+            <h3 className="font-semibold text-foreground mb-1">
+              {asset.brand} {asset.model}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">{asset.type}</p>
 
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate("/submit-complaint");
-              }}
-            >
-              Replacement
-            </Button>
+            <div className="space-y-2 text-sm mb-5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Asset ID</span>
+                <span className="font-medium">{asset.assetId}</span>
+              </div>
+
+              {asset.assignedTo && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Assigned to</span>
+                  <span className="font-medium">{asset.assignedTo.name}</span>
+                </div>
+              )}
+
+              {asset.assignedDate && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Since</span>
+                  <span className="font-medium">
+                    {new Date(asset.assignedDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Condition</span>
+                <span className="font-medium">{asset.condition}</span>
+              </div>
+            </div>
+
+            <div className="mt-auto grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenReturn(true);
+                }}
+              >
+                Return
+              </Button>
+
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate("/submit-complaint");
+                }}
+              >
+                Replacement
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

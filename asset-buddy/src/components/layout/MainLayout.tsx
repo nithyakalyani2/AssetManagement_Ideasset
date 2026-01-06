@@ -8,7 +8,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, isAdmin = false }: MainLayoutProps) {
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
       <AppSidebar isAdmin={isAdmin} />
       <main className="flex-1 overflow-auto">
         <div className="p-8">{children}</div>
