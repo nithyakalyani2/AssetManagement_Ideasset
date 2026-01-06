@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Filter, Plus, Grid, List } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { assets, AssetStatus, AssetType } from "@/lib/mockData";
-import { cn } from "@/lib/utils";
+import axios from "axios";
 
 export default function Inventory() {
   const [search, setSearch] = useState("");
@@ -37,13 +37,32 @@ export default function Inventory() {
       asset.model.toLowerCase().includes(search.toLowerCase()) ||
       asset.assignedTo?.name.toLowerCase().includes(search.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || asset.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || asset.status === statusFilter;
     const matchesType = typeFilter === "all" || asset.type === typeFilter;
 
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  const assetTypes: AssetType[] = ["Laptop", "Monitor", "Keyboard", "Mouse", "Mobile", "Headset", "Webcam", "Docking Station"];
+  const assetTypes: AssetType[] = [
+    "Laptop",
+    "Monitor",
+    "Keyboard",
+    "Mouse",
+    "Mobile",
+    "Headset",
+    "Webcam",
+    "Docking Station",
+  ];
+
+  useEffect(() => {
+    axios
+      .get("https://d848b1a45920.ngrok-free.app/drop-down-master", {
+        headers: { "ngrok-skip-browser-warning": "true" },
+      })
+      .then((res) => res.data[0])
+      .then(console.log);
+  });
 
   return (
     <MainLayout isAdmin>
@@ -69,7 +88,10 @@ export default function Inventory() {
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as AssetStatus | "all")}>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as AssetStatus | "all")}
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -81,14 +103,19 @@ export default function Inventory() {
             <SelectItem value="retired">Retired</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as AssetType | "all")}>
+        <Select
+          value={typeFilter}
+          onValueChange={(v) => setTypeFilter(v as AssetType | "all")}
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             {assetTypes.map((type) => (
-              <SelectItem key={type} value={type}>{type}</SelectItem>
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
