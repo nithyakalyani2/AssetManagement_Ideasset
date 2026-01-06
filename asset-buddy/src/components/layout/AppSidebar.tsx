@@ -14,6 +14,7 @@ import {
   Mouse,
   Smartphone,
   Headphones,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const employeeNav: NavItem[] = [
   { title: "My Assets", url: "/", icon: LayoutDashboard },
   { title: "Request Asset", url: "/request", icon: FileText },
   { title: "My Requests", url: "/my-requests", icon: Package },
+  { title: "Complaints", url: "/my-complaints", icon: AlertCircle },
 ];
 
 const adminNav: NavItem[] = [
