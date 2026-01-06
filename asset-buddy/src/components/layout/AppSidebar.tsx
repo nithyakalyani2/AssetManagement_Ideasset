@@ -15,7 +15,7 @@ import {
   Smartphone,
   Headphones,
   AlertCircle,
-  History
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +38,7 @@ const adminNav: NavItem[] = [
   { title: "Inventory", url: "/admin/inventory", icon: Package },
   { title: "Requests", url: "/admin/requests", icon: FileText, badge: 3 },
   { title: "Employees", url: "/admin/employees", icon: Users },
-  { title: "Asset History", url: "/admin/asset-history", icon: History }
+  { title: "Asset History", url: "/admin/asset-history", icon: History },
 ];
 
 interface AppSidebarProps {
@@ -62,7 +62,7 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        "h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-300",
+        "h-screen sticky top-0 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-300",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -73,7 +73,9 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
             <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
               <Package className="w-4 h-4 text-sidebar-primary-foreground" />
             </div>
-            <span className="font-semibold text-sidebar-primary-foreground">IdeAsset</span>
+            <span className="font-semibold text-sidebar-primary-foreground">
+              IdeAsset
+            </span>
           </div>
         )}
         <button
@@ -142,7 +144,9 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
                 title={label}
               >
                 <Icon className="w-4 h-4" />
-                <span className="text-[10px] text-sidebar-foreground/60">{label}</span>
+                <span className="text-[10px] text-sidebar-foreground/60">
+                  {label}
+                </span>
               </button>
             ))}
           </div>
