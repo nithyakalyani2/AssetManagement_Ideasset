@@ -19,12 +19,9 @@ const badgeVariants = cva(
           "border-transparent bg-status-available-bg text-status-available",
         assigned:
           "border-transparent bg-status-assigned-bg text-status-assigned",
-        repair:
-          "border-transparent bg-status-repair-bg text-status-repair",
-        retired:
-          "border-transparent bg-status-retired-bg text-status-retired",
-        pending:
-          "border-transparent bg-status-pending-bg text-status-pending",
+        repair: "border-transparent bg-status-repair-bg text-status-repair",
+        retired: "border-transparent bg-status-retired-bg text-status-retired",
+        pending: "border-transparent bg-status-pending-bg text-status-pending",
       },
     },
     defaultVariants: {
