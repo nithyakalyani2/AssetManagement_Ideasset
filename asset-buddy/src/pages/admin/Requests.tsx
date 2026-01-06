@@ -18,7 +18,12 @@ export default function Requests() {
     setRequests((prev) =>
       prev.map((r) =>
         r.id === requestId
-          ? { ...r, status: "approved" as const, reviewedBy: "IT Admin", reviewedDate: new Date().toISOString().split("T")[0] }
+          ? {
+              ...r,
+              status: "approved" as const,
+              reviewedBy: "IT Admin",
+              reviewedDate: new Date().toISOString().split("T")[0],
+            }
           : r
       )
     );
@@ -32,7 +37,12 @@ export default function Requests() {
     setRequests((prev) =>
       prev.map((r) =>
         r.id === requestId
-          ? { ...r, status: "rejected" as const, reviewedBy: "IT Admin", reviewedDate: new Date().toISOString().split("T")[0] }
+          ? {
+              ...r,
+              status: "rejected" as const,
+              reviewedBy: "IT Admin",
+              reviewedDate: new Date().toISOString().split("T")[0],
+            }
           : r
       )
     );

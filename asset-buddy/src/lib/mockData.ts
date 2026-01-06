@@ -1,5 +1,7 @@
 export type AssetStatus = 'available' | 'assigned' | 'repair' | 'retired';
 export type RequestStatus = 'pending' | 'approved' | 'rejected';
+export type ComplaintStatus = 'open' | 'in-progress' | 'resolved' | 'closed';
+export type ComplaintCategory = 'Hardware Issue' | 'Software Issue' | 'Network Issue' | 'Access Issue' | 'Other';
 export type AssetType = 'Laptop' | 'Monitor' | 'Keyboard' | 'Mouse' | 'Mobile' | 'Headset' | 'Webcam' | 'Docking Station';
 
 export interface Employee {
@@ -22,7 +24,7 @@ export interface Asset {
   assignedDate?: string;
   purchaseDate: string;
   serialNumber: string;
-  condition: 'New' | 'Good' | 'Fair' | 'Repair';
+  condition: 'New' | 'Good' | 'Repair';
 }
 
 export interface AssetRequest {
@@ -46,6 +48,23 @@ export interface AssetHistory {
   employeeName?: string;
   date: string;
   notes?: string;
+}
+
+export interface Complaint {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeDepartment: string;
+  category: ComplaintCategory;
+  subject: string;
+  description: string;
+  relatedAssetId?: string;
+  priority: 'Low' | 'Medium' | 'High';
+  status: ComplaintStatus;
+  createdDate: string;
+  updatedDate?: string;
+  assignedTo?: string;
+  resolution?: string;
 }
 
 export const employees: Employee[] = [
@@ -90,4 +109,21 @@ export const assetHistory: AssetHistory[] = [
   { id: '5', assetId: 'DCK-001', action: 'Retired', date: '2024-02-01', notes: 'End of life - replaced with newer model' },
 ];
 
+export const complaints: Complaint[] = [
+  { id: 'CMP001', employeeId: 'EMP001', employeeName: 'Sarah Chen', employeeDepartment: 'Engineering', category: 'Hardware Issue', subject: 'Laptop overheating during heavy usage', description: 'My MacBook Pro gets extremely hot when running multiple applications. The fans run at full speed constantly.', relatedAssetId: 'LPT-001', priority: 'High', status: 'in-progress', createdDate: '2024-03-01', assignedTo: 'IT Support Team' },
+  { id: 'CMP002', employeeId: 'EMP001', employeeName: 'Sarah Chen', employeeDepartment: 'Engineering', category: 'Software Issue', subject: 'VPN connection dropping frequently', description: 'The company VPN disconnects every 30 minutes, requiring me to reconnect manually. This is affecting my productivity.', priority: 'Medium', status: 'open', createdDate: '2024-03-05' },
+  { id: 'CMP003', employeeId: 'EMP002', employeeName: 'Michael Torres', employeeDepartment: 'Design', category: 'Access Issue', subject: 'Cannot access design server', description: 'I am unable to connect to the design assets server. Getting permission denied error.', priority: 'High', status: 'resolved', createdDate: '2024-02-20', updatedDate: '2024-02-22', assignedTo: 'IT Admin', resolution: 'Access permissions have been updated. Please try reconnecting.' },
+  { id: 'CMP004', employeeId: 'EMP003', employeeName: 'Emily Watson', employeeDepartment: 'Marketing', category: 'Network Issue', subject: 'Slow internet in meeting room B', description: 'The WiFi in meeting room B is extremely slow during video calls. Other rooms work fine.', priority: 'Low', status: 'open', createdDate: '2024-03-04' },
+  { id: 'CMP005', employeeId: 'EMP001', employeeName: 'Sarah Chen', employeeDepartment: 'Engineering', category: 'Other', subject: 'Request for second monitor setup', description: 'I need assistance setting up a second monitor for my workstation. The monitor is available but I need help with configuration.', priority: 'Low', status: 'closed', createdDate: '2024-02-10', updatedDate: '2024-02-12', resolution: 'Second monitor has been configured and is working properly.' },
+];
+
 export const currentEmployee = employees[0]; // Sarah Chen as the logged-in employee
+
+export const deviceBrands = ["Dell", "HP", "Apple", "Lenovo"];
+
+export const deviceModels = {
+  Dell: ["Latitude 5420", "XPS 13"],
+  HP: ["EliteBook 840", "ProBook 450"],
+  Apple: ["MacBook Air M1", "MacBook Pro M2"],
+  Lenovo: ["ThinkPad T14", "ThinkPad X1"],
+};
