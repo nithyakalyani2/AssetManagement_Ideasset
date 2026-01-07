@@ -32,8 +32,26 @@ export function RequestCard({
   onReject,
 }: RequestCardProps) {
   // Map status (API may return uppercase)
+  const normalizeStatus = (status?: string) => {
+    switch (status?.toUpperCase()) {
+      case "PENDING":
+        return "pending";
+      case "APPROVED":
+      case "COMPLETED":
+        return "approved";
+      case "REJECTED":
+        return "rejected";
+      default:
+        return "unknown";
+    }
+  };
+
   const statusConfig = {
-    pending: { icon: Clock, variant: "pending" as const, label: "Pending" },
+    pending: {
+      icon: Clock,
+      variant: "pending" as const,
+      label: "Pending",
+    },
     approved: {
       icon: CheckCircle,
       variant: "available" as const,
@@ -46,8 +64,10 @@ export function RequestCard({
     },
   };
 
-  // Normalize status to lowercase and fallback
-  const statusKey = request.status?.toLowerCase() as keyof typeof statusConfig;
+  const statusKey = normalizeStatus(
+    request.status
+  ) as keyof typeof statusConfig;
+
   const {
     icon: StatusIcon,
     variant,

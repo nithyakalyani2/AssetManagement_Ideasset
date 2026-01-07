@@ -608,7 +608,7 @@ export default function Inventory() {
                     className="cursor-pointer text-primary underline"
                     onClick={() =>
                       navigate(
-                        `/admin/asset-history?assetId=${asset.assetId}`,
+                        `/admin/asset-history?assetId=${asset.id}`,
                         { state: { id: asset.id } }
                       )
                     }
