@@ -1,5 +1,7 @@
-import { Package, CheckCircle, Wrench, Archive, Clock, Users } from "lucide-react";
+import { Package, CheckCircle, Wrench, Archive, Clock, Users, Loader2, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatCard } from "@/components/assets/StatCard";
@@ -9,11 +11,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { assets, assetRequests } from "@/lib/mockData";
 
+const API_BASE = "http://localhost:3000";
+
+// Interface for asset summary API response
+interface AssetSummary {
+  totalAssets: number;
+  availableAssets: number;
+  assignedAssets: number;
+  underRepairAssets: number;
+  retiredAssets: number;
+}
+
 export default function AdminDashboard() {
-  const totalAssets = assets.length;
-  const availableAssets = assets.filter((a) => a.status === "available").length;
-  const assignedAssets = assets.filter((a) => a.status === "assigned").length;
-  const repairAssets = assets.filter((a) => a.status === "repair").length;
+  // Fetch asset summary from API
+  const { data: assetSummary, isLoading: summaryLoading, error: summaryError } = useQuery<AssetSummary>({
+    queryKey: ["assetSummary"],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/assets/summary`);
+      return res.data;
+    },
+    staleTime: 1000 * 60, // 1 minute
+    refetchInterval: 60000, // Refetch every minute
+  });
+
+  // Use API data or fallback to defaults
+  const totalAssets = assetSummary?.totalAssets ?? 0;
+  const availableAssets = assetSummary?.availableAssets ?? 0;
+  const assignedAssets = assetSummary?.assignedAssets ?? 0;
+  const repairAssets = assetSummary?.underRepairAssets ?? 0;
+  const retiredAssets = assetSummary?.retiredAssets ?? 0;
 
   const pendingRequests = assetRequests.filter((r) => r.status === "pending");
   const recentAssets = assets.slice(0, 4);
@@ -26,33 +52,49 @@ export default function AdminDashboard() {
       />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <StatCard
           title="Total Assets"
-          value={totalAssets}
+          value={summaryLoading ? "..." : totalAssets}
           icon={Package}
           trend={{ value: 12, positive: true }}
           iconClassName="bg-primary/10 text-primary"
         />
         <StatCard
           title="Available"
-          value={availableAssets}
+          value={summaryLoading ? "..." : availableAssets}
           icon={CheckCircle}
           iconClassName="bg-status-available-bg text-status-available"
         />
         <StatCard
           title="Assigned"
-          value={assignedAssets}
+          value={summaryLoading ? "..." : assignedAssets}
           icon={Users}
           iconClassName="bg-status-assigned-bg text-status-assigned"
         />
         <StatCard
           title="Under Repair"
-          value={repairAssets}
+          value={summaryLoading ? "..." : repairAssets}
           icon={Wrench}
           iconClassName="bg-status-repair-bg text-status-repair"
         />
+        <StatCard
+          title="Retired"
+          value={summaryLoading ? "..." : retiredAssets}
+          icon={Archive}
+          iconClassName="bg-muted text-muted-foreground"
+        />
       </div>
+
+      {/* Error Message */}
+      {summaryError && (
+        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-destructive" />
+          <p className="text-sm text-destructive">
+            Failed to load asset summary. Using cached or default values.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pending Requests */}
