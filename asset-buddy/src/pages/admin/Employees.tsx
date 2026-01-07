@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AssetCard } from "@/components/assets/AssetCard";
-import { employees, assets, Employee } from "@/lib/mockData";
 import * as tf from "@tensorflow/tfjs";
 import {
   Select,
@@ -23,6 +22,27 @@ import {
 } from "@/components/ui/select";
 import OpenAI from "openai";
 import axios from "axios";
+
+// types.ts
+export interface UserAsset {
+  assignmentId: number;
+  assignedAt: string;
+  deviceType: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  status: string;
+  condition: string;
+}
+
+export interface UserWithAssets {
+  userId: number;
+  name: string;
+  email: string;
+  role: string;
+  assignedAssetsCount: number;
+  assets: UserAsset[];
+}
 
 const Employees = () => {
   // useEffect(() => {
@@ -48,10 +68,12 @@ const Employees = () => {
   //   run();
   // }, []);
 
+  const [users, setUsers] = useState<UserWithAssets[]>([]);
+  const [selectedEmployee, setSelectedEmployee] =
+    useState<UserWithAssets | null>(null);
+
   const [search, setSearch] = useState("");
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null
-  );
+
   const [role, setRole] = useState(null);
   const ROLES = ["Designer", "Developer", "Tester", "Manager"];
   const ASSETS = ["MacBook Pro", "Dell XPS", "ThinkPad", "MacBook Air"];
@@ -116,11 +138,9 @@ const Employees = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/users/with-assets")
-      .then((res) => {
-        console.log(res.data);
-      })
-      .catch((err) => console.log(err));
+      .get<UserWithAssets[]>("http://localhost:3000/users/with-assets")
+      .then((res) => setUsers(res.data))
+      .catch(console.error);
   }, []);
 
   const ROLE_ASSET_MAP = {
@@ -150,15 +170,12 @@ const Employees = () => {
     });
   }
 
-  const filteredEmployees = employees.filter(
-    (emp) =>
-      emp.name.toLowerCase().includes(search.toLowerCase()) ||
-      emp.email.toLowerCase().includes(search.toLowerCase()) ||
-      emp.department.toLowerCase().includes(search.toLowerCase())
+  const filteredEmployees = users.filter(
+    (u) =>
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      u.role.toLowerCase().includes(search.toLowerCase())
   );
-
-  const getEmployeeAssets = (employeeId: string) =>
-    assets.filter((a) => a.assignedTo?.id === employeeId);
 
   return (
     <MainLayout isAdmin>
@@ -180,44 +197,42 @@ const Employees = () => {
 
       {/* Employee Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredEmployees.map((employee) => {
-          const employeeAssets = getEmployeeAssets(employee.id);
-          return (
-            <Card
-              key={employee.id}
-              className="cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/20"
-              onClick={() => setSelectedEmployee(employee)}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <User className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">
-                      {employee.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {employee.role}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {employee.department}
-                    </p>
-                  </div>
+        {filteredEmployees.map((employee) => (
+          <Card
+            key={employee.userId}
+            className="cursor-pointer transition-all hover:shadow-md"
+            onClick={() => setSelectedEmployee(employee)}
+          >
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-6 h-6 text-primary" />
                 </div>
-                <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Package className="w-4 h-4" />
-                    <span>{employeeAssets.length} assets</span>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    View Details
-                  </Button>
+
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold truncate">{employee.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {employee.role}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {employee.email}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+              </div>
+
+              <div className="mt-4 pt-4 border-t flex justify-between items-center">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Package className="w-4 h-4" />
+                  <span>{employee.assignedAssetsCount} assets</span>
+                </div>
+
+                <Button variant="ghost" size="sm">
+                  View Details
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div>
@@ -286,60 +301,52 @@ const Employees = () => {
               </div>
               <div>
                 <span className="block">{selectedEmployee?.name}</span>
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   {selectedEmployee?.email}
                 </span>
               </div>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Employee Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-sm text-muted-foreground">
-                  Department
-                </span>
-                <p className="font-medium">{selectedEmployee?.department}</p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Role</span>
-                <p className="font-medium">{selectedEmployee?.role}</p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">
-                  Employee ID
-                </span>
-                <p className="font-medium">{selectedEmployee?.id}</p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">
-                  Total Assets
-                </span>
-                <p className="font-medium">
-                  {selectedEmployee &&
-                    getEmployeeAssets(selectedEmployee.id).length}
-                </p>
-              </div>
-            </div>
-
-            {/* Assigned Assets */}
+          {/* Employee Info */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="font-semibold mb-3">Assigned Assets</h4>
-              {selectedEmployee &&
-              getEmployeeAssets(selectedEmployee.id).length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No assets assigned
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {selectedEmployee &&
-                    getEmployeeAssets(selectedEmployee.id).map((asset) => (
-                      <AssetCard key={asset.id} asset={asset} compact />
-                    ))}
-                </div>
-              )}
+              <span className="text-sm text-muted-foreground">Role</span>
+              <p className="font-medium">{selectedEmployee?.role}</p>
             </div>
+            <div>
+              <span className="text-sm text-muted-foreground">Employee ID</span>
+              <p className="font-medium">{selectedEmployee?.userId}</p>
+            </div>
+            <div>
+              <span className="text-sm text-muted-foreground">
+                Total Assets
+              </span>
+              <p className="font-medium">
+                {selectedEmployee?.assignedAssetsCount}
+              </p>
+            </div>
+          </div>
+
+          {/* Assigned Assets */}
+          <div>
+            <h4 className="font-semibold mb-3">Assigned Assets</h4>
+
+            {selectedEmployee?.assets.length === 0 ? (
+              <p className="text-muted-foreground text-center py-6">
+                No assets assigned
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {selectedEmployee?.assets.map((asset) => (
+                  <AssetCard
+                    key={asset.assignmentId}
+                    asset={asset}
+                    compact
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

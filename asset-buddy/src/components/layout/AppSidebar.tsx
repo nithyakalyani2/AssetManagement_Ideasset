@@ -67,7 +67,6 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
     },
     enabled: isAdmin,
     staleTime: 1000 * 60,
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Fetch pending complaints count for admin
