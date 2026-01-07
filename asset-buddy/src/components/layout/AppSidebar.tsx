@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -18,6 +18,7 @@ import {
   History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { employeeApis } from "@/api/employeeApis";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -35,10 +36,12 @@ const employeeNav: NavItem[] = [
   { title: "Complaints", url: "/my-complaints", icon: AlertCircle },
 ];
 
-const adminNav: NavItem[] = [
+// Base admin nav without dynamic badges
+const baseAdminNav: NavItem[] = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Inventory", url: "/admin/inventory", icon: Package },
-  { title: "Requests", url: "/admin/requests", icon: FileText }, // badge will be set dynamically
+  { title: "Requests", url: "/admin/requests", icon: FileText },
+  { title: "Complaints", url: "/admin/complaints", icon: AlertCircle },
   { title: "Employees", url: "/admin/employees", icon: Users },
   { title: "Asset History", url: "/admin/asset-history", icon: History },
 ];
@@ -53,28 +56,44 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
-  // Fetch pending requests count
-  const { data: pendingRequests, isLoading } = useQuery({
+  // Fetch pending asset requests count for admin
+  const { data: pendingRequestsCount = 0 } = useQuery({
     queryKey: ["pendingRequestsCount"],
     queryFn: async () => {
       const res = await axios.get(`${API_BASE}/asset-requests`, {
-        params: { status: "PENDING", page: 1, pageSize: 1 }, // just need count
+        params: { status: "PENDING", page: 1, pageSize: 1 },
       });
-      return res.data.metaData.itemCount;
+      return res.data.metaData?.itemCount ?? 0;
     },
+    enabled: isAdmin,
     staleTime: 1000 * 60,
-    refetchInterval: 1000,
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
+  // Fetch pending complaints count for admin
+  const { data: pendingComplaintsCount = 0 } = useQuery({
+    queryKey: ["pendingComplaintsCount"],
+    queryFn: async () => {
+      const response = await employeeApis.getAllAssetReplacements();
+      return response.filter(r => r.status === "pending").length;
+    },
+    enabled: isAdmin,
+    staleTime: 1000 * 60,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
 
-  const navItems = isAdmin
-    ? adminNav.map((item) =>
-        item.title === "Requests"
-          ? { ...item, badge: pendingRequests ?? 0 } // <-- default to 0
-          : item
-      )
-    : employeeNav;
+  // Build admin nav with dynamic badge counts
+  const adminNav: NavItem[] = baseAdminNav.map((item) => {
+    if (item.title === "Requests" && pendingRequestsCount > 0) {
+      return { ...item, badge: pendingRequestsCount };
+    }
+    if (item.title === "Complaints" && pendingComplaintsCount > 0) {
+      return { ...item, badge: pendingComplaintsCount };
+    }
+    return item;
+  });
 
+  const navItems = isAdmin ? adminNav : employeeNav;
 
   const assetIcons = [
     { icon: Laptop, label: "Laptops" },
@@ -134,7 +153,7 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
               key={item.url}
               to={item.url}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -144,12 +163,15 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
               {!collapsed && (
                 <>
                   <span className="flex-1">{item.title}</span>
-                  {item.badge > 0 && (
+                  {item.badge && item.badge > 0 && (
                     <span className="px-2 py-0.5 text-xs rounded-full bg-destructive text-destructive-foreground">
                       {item.badge}
                     </span>
                   )}
                 </>
+              )}
+              {collapsed && item.badge && item.badge > 0 && (
+                <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-destructive" />
               )}
             </NavLink>
           );
