@@ -8,7 +8,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
-type RequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+type RequestStatus = "PENDING" | "COMPLETED" | "REJECTED";
 
 interface AssetRequestResponse {
   id: number;
@@ -30,6 +30,14 @@ export default function Requests() {
   const [requests, setRequests] = useState<AssetRequestResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [statusCounts, setStatusCounts] = useState<
+    Record<RequestStatus, number>
+  >({
+    PENDING: 0,
+    COMPLETED: 0,
+    REJECTED: 0,
+  });
+
   // Normalize API data: ensure `user` and `assignedUser` exist
   const normalizeRequest = (
     req: AssetRequestResponse
@@ -44,7 +52,6 @@ export default function Requests() {
   const fetchRequests = async (status: RequestStatus) => {
     try {
       setLoading(true);
-
       const res = await axios.get(`${API_BASE}/asset-requests`, {
         params: {
           status,
@@ -54,7 +61,6 @@ export default function Requests() {
         },
       });
 
-      // The API returns { data: [], metaData: {...} }
       const normalized = res.data.data.map(normalizeRequest);
       setRequests(normalized);
     } catch (err) {
@@ -69,8 +75,37 @@ export default function Requests() {
     }
   };
 
+  // Fetch counts for all statuses
+  const fetchStatusCounts = async () => {
+    try {
+      const statuses: RequestStatus[] = ["PENDING", "COMPLETED", "REJECTED"];
+      const counts: Record<RequestStatus, number> = {
+        PENDING: 0,
+        COMPLETED: 0,
+        REJECTED: 0,
+      };
+
+      await Promise.all(
+        statuses.map(async (status) => {
+          const res = await axios.get(`${API_BASE}/asset-requests`, {
+            params: { status, page: 1, pageSize: 1 }, // just need count
+          });
+          counts[status] = res.data.metaData.itemCount ?? 0;
+        })
+      );
+
+      setStatusCounts(counts);
+    } catch (err) {
+      console.error("Failed to fetch status counts", err);
+    }
+  };
+
   useEffect(() => {
     fetchRequests(activeTab);
+    fetchStatusCounts();
+    // Optionally, refresh counts every 5–10 seconds
+    const interval = setInterval(fetchStatusCounts, 5000);
+    return () => clearInterval(interval);
   }, [activeTab]);
 
   const approveRequest = async (id: number) => {
@@ -81,6 +116,7 @@ export default function Requests() {
         description: "The asset request has been approved.",
       });
       fetchRequests(activeTab);
+      fetchStatusCounts();
     } catch (err) {
       console.error(err);
       toast({
@@ -100,6 +136,7 @@ export default function Requests() {
         variant: "destructive",
       });
       fetchRequests(activeTab);
+      fetchStatusCounts();
     } catch (err) {
       console.error(err);
       toast({
@@ -109,6 +146,14 @@ export default function Requests() {
       });
     }
   };
+
+  const renderBadge = (count: number) =>
+  count > 0 ? (
+    <span className="ml-1 text-muted-foreground text-sm">
+      ({count})
+    </span>
+  ) : null;
+
 
   return (
     <MainLayout isAdmin>
@@ -122,9 +167,15 @@ export default function Requests() {
         onValueChange={(val) => setActiveTab(val as RequestStatus)}
       >
         <TabsList className="mb-6">
-          <TabsTrigger value="PENDING">Pending</TabsTrigger>
-          <TabsTrigger value="APPROVED">Approved</TabsTrigger>
-          <TabsTrigger value="REJECTED">Rejected</TabsTrigger>
+          <TabsTrigger value="PENDING">
+            Pending {renderBadge(statusCounts.PENDING)}
+          </TabsTrigger>
+          <TabsTrigger value="COMPLETED">
+            Approved {renderBadge(statusCounts.COMPLETED)}
+          </TabsTrigger>
+          <TabsTrigger value="REJECTED">
+            Rejected {renderBadge(statusCounts.REJECTED)}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab}>
