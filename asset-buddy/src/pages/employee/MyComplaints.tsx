@@ -176,7 +176,7 @@ export default function MyComplaints() {
             <Link to="/submit-complaint">
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
-                Submit a Complaint
+                New Complaint
               </Button>
             </Link>
           </CardContent>
@@ -195,13 +195,7 @@ export default function MyComplaints() {
           <TabsContent value="active">
             {openComplaints.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">No active complaints</p>
-                <Link to="/submit-complaint">
-                  <Button variant="outline">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Submit a Complaint
-                  </Button>
-                </Link>
+                <p className="text-muted-foreground">No active complaints</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

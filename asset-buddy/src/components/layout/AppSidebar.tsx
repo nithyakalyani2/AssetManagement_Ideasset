@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
   FileText,
   Users,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Laptop,
@@ -16,10 +15,12 @@ import {
   Headphones,
   AlertCircle,
   History,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { employeeApis } from "@/api/employeeApis";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
 
 interface NavItem {
@@ -55,6 +56,8 @@ const API_BASE = "http://localhost:3000";
 export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
   // Fetch pending asset requests count for admin
   const { data: pendingRequestsCount = 0 } = useQuery({
@@ -103,6 +106,11 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
     { icon: Headphones, label: "Headsets" },
   ];
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <aside
       className={cn(
@@ -134,12 +142,26 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
         </button>
       </div>
 
-      {/* Role Indicator */}
+      {/* User Info & Role Indicator */}
       <div className="px-4 py-3 border-b border-sidebar-border">
         {!collapsed && (
-          <span className="text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
-            {isAdmin ? "IT Admin" : "Employee"}
-          </span>
+          <div>
+            <p className="text-sm font-medium text-sidebar-foreground truncate">
+              {user?.name || "User"}
+            </p>
+            <span className="text-xs text-sidebar-foreground/60 uppercase tracking-wider">
+              {isAdmin ? "IT Admin" : "Employee"}
+            </span>
+          </div>
+        )}
+        {collapsed && (
+          <div className="flex justify-center">
+            <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
+              <span className="text-xs font-medium">
+                {user?.name?.charAt(0) || "U"}
+              </span>
+            </div>
+          </div>
         )}
       </div>
 
@@ -200,17 +222,15 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
         </div>
       )}
 
-      {/* Footer */}
+      {/* Logout Button */}
       <div className="p-4 border-t border-sidebar-border">
-        <NavLink
-          to={isAdmin ? "/my-assets" : "/admin"}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-sidebar-accent transition-colors"
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-destructive/10 hover:text-destructive transition-colors"
         >
-          <Settings className="w-5 h-5" />
-          {!collapsed && (
-            <span>{isAdmin ? "Employee View" : "Admin View"}</span>
-          )}
-        </NavLink>
+          <LogOut className="w-5 h-5" />
+          {!collapsed && <span>Logout</span>}
+        </button>
       </div>
     </aside>
   );
