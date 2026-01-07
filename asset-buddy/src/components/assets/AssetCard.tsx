@@ -42,21 +42,27 @@ interface AssetCardProps {
   asset: any;
   onClick?: () => void;
   compact?: boolean;
+  showFooter?: boolean;
 }
 
-export function AssetCard({ asset, onClick, compact = false }: AssetCardProps) {
+export function AssetCard({
+  asset,
+  onClick,
+  compact = false,
+  showFooter,
+}: AssetCardProps) {
   const navigate = useNavigate();
   const [openReturn, setOpenReturn] = useState(false);
   const [returnReason, setReturnReason] = useState("");
 
-  const Icon = assetIcons[asset.type] || Laptop;
+  const Icon = assetIcons[asset?.type || asset?.deviceType] || Laptop;
 
   const statusVariant = {
     available: "available",
     assigned: "assigned",
     repair: "repair",
     retired: "retired",
-  }[asset.status] as "available" | "assigned" | "repair" | "retired";
+  }[asset?.status] as "available" | "assigned" | "repair" | "retired";
 
   if (compact) {
     return (
@@ -74,15 +80,15 @@ export function AssetCard({ asset, onClick, compact = false }: AssetCardProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-sm truncate">
-                  {asset.brand} {asset.model}
+                <span className="font-medium truncate">
+                  {asset?.brand} {asset?.model}
                 </span>
                 <Badge variant={statusVariant} className="shrink-0">
-                  {asset.status}
+                  {asset?.status}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {asset.assetId} • {asset.type}
+                {asset?.assetId} • {asset?.type || asset?.deviceType}
               </p>
             </div>
           </div>
@@ -100,98 +106,97 @@ export function AssetCard({ asset, onClick, compact = false }: AssetCardProps) {
         )}
         onClick={onClick}
       >
-        <CardContent className="p-5">
+        <CardContent className="p-5 space-y-2">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
               <Icon className="w-6 h-6 text-muted-foreground" />
             </div>
-            <Badge variant={statusVariant}>{asset.status}</Badge>
+            <Badge variant={statusVariant}>{asset?.status}</Badge>
           </div>
 
-          <h3 className="font-semibold text-foreground mb-1">
-            {asset.brand} {asset.model}
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            {asset.deviceType}
-          </p>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Asset Type</span>
+            <span className="font-medium">
+              {asset?.deviceType || asset?.type}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Brand</span>
+            <span className="font-medium">{asset?.brand}</span>
+          </div>
 
-          <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Model</span>
+            <span className="font-medium">{asset?.model}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Serial Number</span>
+            <span className="font-medium">{asset?.serialNumber}</span>
+          </div>
+
+          {/* <h3 className="font-semibold text-foreground mb-1">
+            {asset?.brand} - {asset?.model}
+          </h3> */}
+
+          <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Asset ID</span>
-              <span className="font-medium">{asset.id}</span>
+              <span className="font-medium">{asset?.id}</span>
             </div>
-            {asset.assignedTo && (
+            {/* if employee -> no need to display */}
+            {asset?.assignedTo && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Assigned to</span>
-                <span className="font-medium">{asset.assignedTo.name}</span>
+                <span className="font-medium">{asset?.assignedTo.name}</span>
               </div>
             )}
-            {asset.assignedDate && (
+
+            {asset?.assignedDate && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Since</span>
                 <span className="font-medium">
-                  {new Date(asset.assignedDate).toLocaleDateString()}
+                  {new Date(asset?.assignedDate).toLocaleDateString()}
                 </span>
               </div>
             )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Condition</span>
-              <span className="font-medium">{asset.condition}</span>
+              <span className="font-medium">{asset?.condition}</span>
             </div>
 
-            <h3 className="font-semibold text-foreground mb-1">
-              {asset.brand} {asset.model}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">{asset.type}</p>
-
-            <div className="space-y-2 text-sm mb-5">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Asset ID</span>
-                <span className="font-medium">{asset.assetId}</span>
-              </div>
-
-              {asset.assignedTo && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Assigned to</span>
-                  <span className="font-medium">{asset.assignedTo.name}</span>
-                </div>
-              )}
-
-              {asset.assignedDate && (
+            <div className="space-y-2 mb-5">
+              {asset?.assignedDate && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Since</span>
                   <span className="font-medium">
-                    {new Date(asset.assignedDate).toLocaleDateString()}
+                    {new Date(asset?.assignedDate).toLocaleDateString()}
                   </span>
                 </div>
               )}
+            </div>
+            {showFooter && (
+              <div className="mt-auto grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenReturn(true);
+                  }}
+                >
+                  Return
+                </Button>
 
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Condition</span>
-                <span className="font-medium">{asset.condition}</span>
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/submit-complaint");
+                  }}
+                >
+                  Replacement
+                </Button>
               </div>
-            </div>
-
-            <div className="mt-auto grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenReturn(true);
-                }}
-              >
-                Return
-              </Button>
-
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate("/submit-complaint");
-                }}
-              >
-                Replacement
-              </Button>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -203,7 +208,7 @@ export function AssetCard({ asset, onClick, compact = false }: AssetCardProps) {
           </DialogHeader>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Reason for returning</label>
+            <label className="font-medium">Reason for returning</label>
             <Textarea
               value={returnReason}
               onChange={(e) => setReturnReason(e.target.value)}

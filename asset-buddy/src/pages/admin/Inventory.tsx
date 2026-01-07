@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Search, Plus, Grid, List } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Search, Plus, Grid, List, ArrowUpDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -29,10 +29,36 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { assets, Asset, AssetStatus, AssetType } from "@/lib/mockData";
+import { Asset, AssetStatus, AssetType } from "@/lib/mockData";
+import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
+
+export const fetchAssets = async ({
+  page,
+  pageSize,
+  search,
+  order,
+}: {
+  page: number;
+  pageSize: number;
+  search: string;
+  order: "ASC" | "DESC";
+}) => {
+  const res = await axios.get("http://localhost:3000/assets", {
+    params: {
+      page,
+      pageSize,
+      search,
+      order,
+    },
+  });
+
+  return res.data;
+};
 
 export default function Inventory() {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<AssetStatus | "all">("all");
@@ -40,13 +66,9 @@ export default function Inventory() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [openDialog, setOpenDialog] = useState(false);
 
-  const generatedAssetId = useMemo(
-    () =>
-      `AST-${Math.floor(Math.random() * 10000)
-        .toString()
-        .padStart(4, "0")}`,
-    [openDialog]
-  );
+  const [gridPage, setGridPage] = useState(1);
+  const [hasMoreGrid, setHasMoreGrid] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [newAsset, setNewAsset] = useState<Omit<Asset, "id" | "assetId">>({
     type: "Laptop",
@@ -71,46 +93,235 @@ export default function Inventory() {
     "Docking Station",
   ];
 
-  const brands = ["Dell", "HP", "Apple", "Lenovo"];
-  const modelsByBrand: Record<string, string[]> = {
-    Dell: ["Latitude 5420", "XPS 13"],
-    HP: ["EliteBook 840", "ProBook 450"],
-    Apple: ["MacBook Air M1", "MacBook Pro M2"],
-    Lenovo: ["ThinkPad T14", "ThinkPad X1"],
-  };
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const filteredAssets = assets.filter((asset) => {
-    const q = search.toLowerCase();
-    return (
-      (asset.assetId.toLowerCase().includes(q) ||
-        asset.brand.toLowerCase().includes(q) ||
-        asset.model.toLowerCase().includes(q) ||
-        asset.assignedTo?.name.toLowerCase().includes(q)) &&
-      (statusFilter === "all" || asset.status === statusFilter) &&
-      (typeFilter === "all" || asset.type === typeFilter)
-    );
-  });
+  // table only
+  // table only
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [order, setOrder] = useState<"ASC" | "DESC">("ASC");
 
-  const handleAddAsset = () => {
-    const newEntry: Asset = {
-      id: crypto.randomUUID(),
-      assetId: generatedAssetId,
-      ...newAsset,
+  const [meta, setMeta] = useState<any>(null);
+
+  useEffect(() => {
+    const loadAssets = async () => {
+      setLoading(true);
+
+      const activePage = viewMode === "grid" ? gridPage : page;
+
+      const res = await fetchAssets({
+        page: activePage,
+        pageSize,
+        search,
+        order,
+      });
+
+      const mappedAssets: Asset[] = res.data.map((a: any) => ({
+        id: a.id.toString(),
+        assetId: `AST-${a.id.toString().padStart(4, "0")}`,
+        type: a.deviceType,
+        brand: a.brand,
+        model: a.model,
+        serialNumber: a.serialNumber,
+        purchaseDate: a.purchaseDate,
+        status: a.status.toLowerCase(),
+        condition: a.condition,
+        assignedTo: undefined,
+        assignedDate: undefined,
+      }));
+
+      if (viewMode === "grid") {
+        setAssets((prev) => [...prev, ...mappedAssets]);
+        setHasMoreGrid(res.metaData.hasNextPage);
+      } else {
+        setAssets(mappedAssets);
+        setMeta(res.metaData);
+      }
+
+      setLoading(false);
     };
 
-    assets.push(newEntry);
-    setOpenDialog(false);
-    setNewAsset({
-      type: "Laptop",
-      brand: "",
-      model: "",
-      status: "available",
-      assignedTo: undefined,
-      assignedDate: undefined,
-      purchaseDate: "",
-      serialNumber: "",
-      condition: "New",
-    });
+    loadAssets();
+  }, [page, gridPage, pageSize, search, order, viewMode, refreshKey]);
+
+  useEffect(() => {
+    if (viewMode === "grid") {
+      setAssets([]);
+      setGridPage(1);
+      setHasMoreGrid(true);
+    }
+  }, [search, order, viewMode, refreshKey]);
+
+  useEffect(() => {
+    if (viewMode !== "grid") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreGrid && !loading) {
+          setGridPage((p) => p + 1);
+        }
+      },
+      { threshold: 1 }
+    );
+
+    const target = document.getElementById("grid-loader");
+    if (target) observer.observe(target);
+
+    return () => observer.disconnect();
+  }, [hasMoreGrid, loading, viewMode]);
+
+  const brandsByType: Record<AssetType, string[]> = {
+    Laptop: [
+      "Dell",
+      "HP",
+      "Apple",
+      "Lenovo",
+      "Asus",
+      "Acer",
+      "MSI",
+      "Microsoft",
+      "LG",
+    ],
+
+    Monitor: ["Dell", "HP", "LG", "Samsung", "Acer"],
+
+    Keyboard: ["Logitech", "Dell", "HP", "Zebronics", "Portronics"],
+
+    Mouse: ["Logitech", "Dell", "HP", "Zebronics", "Portronics"],
+
+    Mobile: ["Apple", "Samsung", "OnePlus", "Xiaomi"],
+
+    Headset: ["Logitech", "JBL", "Sony", "Zebronics"],
+
+    Webcam: ["Logitech", "Dell", "HP"],
+
+    "Docking Station": ["Dell", "HP", "Lenovo"],
+  };
+
+  const modelsByBrand: Record<string, string[]> = {
+    // 🔹 Laptop brands
+    Dell: [
+      "Latitude 5420",
+      "Latitude 7430",
+      "XPS 13",
+      "XPS 15",
+      "Inspiron 15 3520",
+    ],
+
+    HP: ["EliteBook 840", "EliteBook 860 G9", "ProBook 450", "Pavilion 14"],
+
+    Apple: [
+      "MacBook Air M1",
+      "MacBook Air M2",
+      "MacBook Pro M1",
+      "MacBook Pro M2",
+      "iPhone 14",
+      "iPhone 15",
+    ],
+
+    Lenovo: ["ThinkPad T14", "ThinkPad X1 Carbon", "ThinkPad E14"],
+
+    Asus: ["VivoBook 15", "ZenBook 14", "ROG Strix G15"],
+
+    Acer: ["Aspire 5", "Swift 3", "Predator Helios 300"],
+
+    MSI: ["Modern 14", "GF63 Thin"],
+
+    Microsoft: ["Surface Laptop 5", "Surface Pro 9"],
+
+    LG: ["Gram 14", "Gram 16"],
+
+    // 🔹 Accessories
+    Logitech: ["MX Master 3", "MX Keys", "K380 Keyboard", "C920 Webcam"],
+
+    Zebronics: [
+      "Zeb-Transformer Keyboard",
+      "Zeb-Dash Mouse",
+      "Zeb-Thunder Headset",
+    ],
+
+    Portronics: ["Toad Mouse", "Hydra Keyboard"],
+
+    Samsung: ["Galaxy S23", "Galaxy Book Pro"],
+
+    Sony: ["WH-1000XM5"],
+
+    JBL: ["Quantum 200"],
+
+    OnePlus: ["OnePlus 11"],
+
+    Xiaomi: ["Redmi Note 13"],
+  };
+
+  const displayedAssets = assets;
+
+  const handleAddAsset = async () => {
+    try {
+      const payload = {
+        deviceType: newAsset.type,
+        brand: newAsset.brand,
+        model: newAsset.model,
+        serialNumber: newAsset.serialNumber,
+        purchaseDate: newAsset.purchaseDate,
+        warrantyExpiryDate: newAsset.purchaseDate, // later you can auto +1 year
+        status:
+          newAsset.status === "available"
+            ? "Available"
+            : newAsset.status === "repair"
+            ? "Under Repair"
+            : "Retired",
+        condition: newAsset.condition,
+      };
+
+      const res = await axios.post("http://localhost:3000/assets", payload);
+
+      toast({
+        title: "Asset Added",
+        description: `${newAsset.brand} ${newAsset.model} has been added successfully.`,
+      });
+
+      setOpenDialog(false);
+      setNewAsset({
+        type: "Laptop",
+        brand: "",
+        model: "",
+        status: "available",
+        assignedTo: undefined,
+        assignedDate: undefined,
+        purchaseDate: "",
+        serialNumber: "",
+        condition: "New",
+      });
+
+      setRefreshKey((k) => k + 1);
+      if (viewMode === "grid") {
+        setAssets([]);
+        setGridPage(1);
+        setHasMoreGrid(true);
+      } else {
+        setPage(1);
+      }
+    } catch (error) {
+      console.error("Failed to add asset", error);
+
+      toast({
+        title: "Failed to add asset",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const pageSizeOptions = [1, 5, 10, 20, 50, 100];
+
+  const getRangeText = () => {
+    if (!meta) return "";
+
+    const start = (meta.page - 1) * meta.pageSize + 1;
+    const end = Math.min(meta.page * meta.pageSize, meta.itemCount);
+
+    return `${start}–${end} of ${meta.itemCount}`;
   };
 
   return (
@@ -134,16 +345,18 @@ export default function Inventory() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-8">Asset ID</label>
-              <Input value={generatedAssetId} disabled />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-8">Device Type</label>
+              <label className="text-sm font-medium mb-1 block">
+                Device Type
+              </label>
               <Select
                 value={newAsset.type}
                 onValueChange={(v) =>
-                  setNewAsset({ ...newAsset, type: v as AssetType })
+                  setNewAsset({
+                    ...newAsset,
+                    type: v as AssetType,
+                    brand: "",
+                    model: "",
+                  })
                 }
               >
                 <SelectTrigger>
@@ -160,7 +373,7 @@ export default function Inventory() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-8">Brand</label>
+              <label className="text-sm font-medium mb-1 block">Brand</label>
               <Select
                 value={newAsset.brand}
                 onValueChange={(v) =>
@@ -171,7 +384,7 @@ export default function Inventory() {
                   <SelectValue placeholder="Select brand" />
                 </SelectTrigger>
                 <SelectContent>
-                  {brands.map((b) => (
+                  {(brandsByType[newAsset.type] || []).map((b) => (
                     <SelectItem key={b} value={b}>
                       {b}
                     </SelectItem>
@@ -181,7 +394,7 @@ export default function Inventory() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-8">Model</label>
+              <label className="text-sm font-medium mb-1 block">Model</label>
               <Select
                 value={newAsset.model}
                 onValueChange={(v) => setNewAsset({ ...newAsset, model: v })}
@@ -201,7 +414,9 @@ export default function Inventory() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-8">Serial Number</label>
+              <label className="text-sm font-medium mb-1 block">
+                Serial Number
+              </label>
               <Input
                 value={newAsset.serialNumber}
                 onChange={(e) =>
@@ -211,18 +426,31 @@ export default function Inventory() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-8">Purchase Date</label>
+              <label className="text-sm font-medium mb-1 block">
+                Purchase Date
+              </label>
+
               <Input
                 type="date"
                 value={newAsset.purchaseDate}
                 onChange={(e) =>
                   setNewAsset({ ...newAsset, purchaseDate: e.target.value })
                 }
+                className="
+                      bg-background
+                      text-foreground
+                      border border-input
+                      rounded-md
+                      h-10
+                      px-3
+                      [&::-webkit-calendar-picker-indicator]:opacity-70
+                      [&::-webkit-calendar-picker-indicator]:cursor-pointer
+                    "
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-8">Status</label>
+              <label className="text-sm font-medium mb-1 block">Status</label>
               <Select
                 value={newAsset.status}
                 onValueChange={(v) =>
@@ -241,7 +469,9 @@ export default function Inventory() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-8">Condition</label>
+              <label className="text-sm font-medium mb-1 block">
+                Condition
+              </label>
               <Select
                 value={newAsset.condition}
                 onValueChange={(v) =>
@@ -332,19 +562,37 @@ export default function Inventory() {
       </div>
 
       {viewMode === "grid" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredAssets.map((asset) => (
-            <AssetCard key={asset.id} asset={asset} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {displayedAssets.map((asset) => (
+              <AssetCard key={asset.id} asset={asset} />
+            ))}
+          </div>
+
+          {hasMoreGrid && (
+            <div
+              id="grid-loader"
+              className="h-10 flex justify-center items-center text-muted-foreground"
+            >
+              Loading more...
+            </div>
+          )}
+        </>
       )}
 
       {viewMode === "list" && (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-hidden pb-2">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead>Asset ID</TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => setOrder(order === "ASC" ? "DESC" : "ASC")}
+                >
+                  Asset ID
+                  <ArrowUpDown className="inline ml-2 w-4 h-4 text-muted-foreground" />
+                </TableHead>
+
                 <TableHead>Type</TableHead>
                 <TableHead>Brand / Model</TableHead>
                 <TableHead>Status</TableHead>
@@ -354,12 +602,15 @@ export default function Inventory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAssets.map((asset) => (
+              {displayedAssets.map((asset) => (
                 <TableRow key={asset.id}>
                   <TableCell
                     className="cursor-pointer text-primary underline"
                     onClick={() =>
-                      navigate(`/admin/asset-history?assetId=${asset.assetId}`)
+                      navigate(
+                        `/admin/asset-history?assetId=${asset.assetId}`,
+                        { state: { id: asset.id } }
+                      )
                     }
                   >
                     {asset.assetId}
@@ -369,9 +620,14 @@ export default function Inventory() {
                     {asset.brand} {asset.model}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={asset.status}>{asset.status}</Badge>
+                    <Badge variant={asset.status as any}>{asset.status}</Badge>
                   </TableCell>
-                  <TableCell>{asset.assignedTo?.name || "—"}</TableCell>
+                  <TableCell>
+                    {
+                      // asset?.assignedTo ||
+                      "—"
+                    }
+                  </TableCell>
                   <TableCell>{asset.condition}</TableCell>
                   <TableCell className="text-right">
                     <Button
@@ -390,6 +646,63 @@ export default function Inventory() {
               ))}
             </TableBody>
           </Table>
+
+          {viewMode === "list" && meta && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4 px-2">
+              {/* Rows per page */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Rows per page
+                </span>
+
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(v) => {
+                    const newSize = Number(v);
+                    setPageSize(newSize);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pageSizeOptions.map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Range text */}
+              <span className="text-sm text-muted-foreground">
+                {getRangeText()}
+              </span>
+
+              {/* Prev / Next */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!meta.hasPreviousPage}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Previous
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!meta.hasNextPage}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </MainLayout>
