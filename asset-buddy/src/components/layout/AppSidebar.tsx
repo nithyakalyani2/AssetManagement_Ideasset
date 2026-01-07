@@ -18,6 +18,8 @@ import {
   History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 interface NavItem {
   title: string;
@@ -36,7 +38,7 @@ const employeeNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Inventory", url: "/admin/inventory", icon: Package },
-  { title: "Requests", url: "/admin/requests", icon: FileText, badge: 3 },
+  { title: "Requests", url: "/admin/requests", icon: FileText }, // badge will be set dynamically
   { title: "Employees", url: "/admin/employees", icon: Users },
   { title: "Asset History", url: "/admin/asset-history", icon: History },
 ];
@@ -45,10 +47,34 @@ interface AppSidebarProps {
   isAdmin?: boolean;
 }
 
+const API_BASE = "http://localhost:3000";
+
 export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const navItems = isAdmin ? adminNav : employeeNav;
+
+  // Fetch pending requests count
+  const { data: pendingRequests, isLoading } = useQuery({
+    queryKey: ["pendingRequestsCount"],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/asset-requests`, {
+        params: { status: "PENDING", page: 1, pageSize: 1 }, // just need count
+      });
+      return res.data.metaData.itemCount;
+    },
+    staleTime: 1000 * 60,
+    refetchInterval: 1000,
+  });
+
+
+  const navItems = isAdmin
+    ? adminNav.map((item) =>
+        item.title === "Requests"
+          ? { ...item, badge: pendingRequests ?? 0 } // <-- default to 0
+          : item
+      )
+    : employeeNav;
+
 
   const assetIcons = [
     { icon: Laptop, label: "Laptops" },
@@ -118,7 +144,7 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
               {!collapsed && (
                 <>
                   <span className="flex-1">{item.title}</span>
-                  {item.badge && (
+                  {item.badge > 0 && (
                     <span className="px-2 py-0.5 text-xs rounded-full bg-destructive text-destructive-foreground">
                       {item.badge}
                     </span>
