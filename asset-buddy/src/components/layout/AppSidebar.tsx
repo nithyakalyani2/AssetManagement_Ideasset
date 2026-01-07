@@ -43,7 +43,7 @@ const baseAdminNav: NavItem[] = [
   { title: "Requests", url: "/admin/requests", icon: FileText },
   { title: "Complaints", url: "/admin/complaints", icon: AlertCircle },
   { title: "Employees", url: "/admin/employees", icon: Users },
-  { title: "Asset History", url: "/admin/asset-history", icon: History },
+  // { title: "Asset History", url: "/admin/asset-history", icon: History },
 ];
 
 interface AppSidebarProps {
@@ -67,7 +67,6 @@ export function AppSidebar({ isAdmin = false }: AppSidebarProps) {
     },
     enabled: isAdmin,
     staleTime: 1000 * 60,
-    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Fetch pending complaints count for admin
