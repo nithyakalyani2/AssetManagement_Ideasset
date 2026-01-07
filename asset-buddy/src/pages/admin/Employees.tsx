@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import OpenAI from "openai";
+import axios from "axios";
 
 const Employees = () => {
   // useEffect(() => {
@@ -111,6 +112,15 @@ const Employees = () => {
     }
 
     trainModel();
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:3000/users/with-assets")
+      .then((res) => {
+        console.log(res.data);
+      })
+      .catch((err) => console.log(err));
   }, []);
 
   const ROLE_ASSET_MAP = {

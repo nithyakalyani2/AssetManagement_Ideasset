@@ -31,7 +31,9 @@ export default function MyAssets() {
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">📦</span>
           </div>
-          <h3 className="text-lg font-medium text-foreground mb-2">No assets assigned</h3>
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            No assets assigned
+          </h3>
           <p className="text-muted-foreground mb-6">
             You don't have any assets assigned to you yet.
           </p>
@@ -51,11 +53,8 @@ export default function MyAssets() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {myAssets.map((asset, index) => (
-              <div
-                key={asset.id}
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <AssetCard asset={asset} />
+              <div key={asset.id} style={{ animationDelay: `${index * 50}ms` }}>
+                <AssetCard asset={asset} showFooter />
               </div>
             ))}
           </div>
