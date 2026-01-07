@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { employeeApis } from "@/api/employeeApis";
+import axios from "axios";
+
+const BASE_URL = "http://localhost:3000";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,18 +17,35 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await employeeApis.login(email, password);
+      // 1️⃣ Login
+      const loginRes = await axios.post(`${BASE_URL}/auth/login`, {
+        email,
+        password,
+      });
 
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+      const { userId, role } = loginRes.data;
 
-      if (response.role === "ADMIN") {
+      if (!userId || !role) {
+        throw new Error("Invalid login response");
+      }
+
+      // 2️⃣ Fetch user details
+      const userRes = await axios.get(`${BASE_URL}/users/${userId}`);
+
+      // 3️⃣ Store everything
+      localStorage.setItem("userId", String(userId));
+      localStorage.setItem("role", role);
+      localStorage.setItem("user", JSON.stringify(userRes.data));
+
+      // 4️⃣ Navigate
+      if (role === "ADMIN") {
         navigate("/admin");
       } else {
         navigate("/my-assets");
       }
     } catch (err: any) {
-      setError(err.message || "Invalid email or password");
+      console.error(err);
+      setError(err?.response?.data?.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }

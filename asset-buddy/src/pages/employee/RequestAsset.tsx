@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   Laptop,
   Monitor,
@@ -18,7 +19,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { AssetType } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
@@ -41,11 +41,12 @@ const assetTypes: {
 export default function RequestAsset() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [selectedType, setSelectedType] = useState<AssetType | null>(null);
-  const [priority, setPriority] = useState<string>("Medium");
-  const [reason, setReason] = useState("");
 
-  const handleSubmit = () => {
+  const [selectedType, setSelectedType] = useState<AssetType | null>(null);
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
     if (!selectedType || !reason.trim()) {
       toast({
         title: "Missing Information",
@@ -55,12 +56,43 @@ export default function RequestAsset() {
       return;
     }
 
-    toast({
-      title: "Request Submitted",
-      description: "Your asset request has been submitted for review.",
-    });
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      toast({
+        title: "Session Expired",
+        description: "Please login again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    navigate("/my-requests");
+    const user = JSON.parse(storedUser);
+
+    try {
+      setLoading(true);
+
+      await axios.post("http://localhost:3000/asset-requests", {
+        deviceType: selectedType,
+        userId: user.id,
+        reason,
+      });
+
+      toast({
+        title: "Request Submitted",
+        description: "Your asset request has been submitted for review.",
+      });
+
+      navigate("/my-requests");
+    } catch (err: any) {
+      toast({
+        title: "Submission Failed",
+        description:
+          err.response?.data?.message || "Something went wrong. Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -77,7 +109,6 @@ export default function RequestAsset() {
       />
 
       <div className="max-w-3xl">
-        {/* Asset Type Selection */}
         <div className="mb-8">
           <Label className="text-base font-medium mb-4 block">
             Select Asset Type
@@ -96,7 +127,7 @@ export default function RequestAsset() {
               >
                 <div
                   className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                    "w-10 h-10 rounded-lg flex items-center justify-center",
                     selectedType === type
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary text-muted-foreground"
@@ -113,57 +144,25 @@ export default function RequestAsset() {
           </div>
         </div>
 
-        {/* Priority Selection */}
         <Card className="mb-6">
           <CardContent className="p-5">
             <Label className="text-base font-medium mb-4 block">
-              Priority Level
-            </Label>
-            <RadioGroup
-              value={priority}
-              onValueChange={setPriority}
-              className="flex gap-4"
-            >
-              {["Low", "Medium", "High"].map((level) => (
-                <div key={level} className="flex items-center space-x-2">
-                  <RadioGroupItem value={level} id={level} />
-                  <Label htmlFor={level} className="cursor-pointer">
-                    {level}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        {/* Reason */}
-        <Card className="mb-6">
-          <CardContent className="p-5">
-            <Label
-              htmlFor="reason"
-              className="text-base font-medium mb-4 block"
-            >
               Reason for Request
             </Label>
             <Textarea
-              id="reason"
               placeholder="Please explain why you need this asset..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={4}
               className="resize-none"
             />
-            <p className="text-xs text-muted-foreground mt-2">
-              Provide a clear justification to help IT prioritize your request.
-            </p>
           </CardContent>
         </Card>
 
-        {/* Submit */}
         <div className="flex gap-3">
-          <Button onClick={handleSubmit} className="flex-1">
+          <Button onClick={handleSubmit} className="flex-1" disabled={loading}>
             <Send className="w-4 h-4 mr-2" />
-            Submit Request
+            {loading ? "Submitting..." : "Submit Request"}
           </Button>
           <Button variant="outline" onClick={() => navigate(-1)}>
             Cancel
