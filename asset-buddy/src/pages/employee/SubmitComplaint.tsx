@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, AlertTriangle, Laptop, Wifi, Key, HelpCircle, Monitor, ImagePlus, X } from "lucide-react";
+import { ArrowLeft, Send, Laptop, Wifi, Key, HelpCircle, Monitor, ImagePlus, X, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { assets, currentEmployee, ComplaintCategory } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
- 
+import { employeeApis } from "@/api/employeeApis";
+
 const categories: { type: ComplaintCategory; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
   { type: "Hardware Issue", icon: Laptop, description: "Device problems" },
   { type: "Software Issue", icon: Monitor, description: "App or system issues" },
@@ -27,7 +28,7 @@ const categories: { type: ComplaintCategory; icon: React.ComponentType<{ classNa
   { type: "Access Issue", icon: Key, description: "Permission problems" },
   { type: "Other", icon: HelpCircle, description: "Other IT issues" },
 ];
- 
+
 export default function SubmitComplaint() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -36,21 +37,22 @@ export default function SubmitComplaint() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>("Medium");
   const [relatedAsset, setRelatedAsset] = useState<string>("");
- 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const myAssets = assets.filter(asset => asset.assignedTo?.id === currentEmployee.id);
- 
+
   // Image upload state and handlers
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
- 
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
- 
+
     const file = files[0];
- 
+
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast({
@@ -60,7 +62,7 @@ export default function SubmitComplaint() {
       });
       return;
     }
- 
+
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       toast({
@@ -70,18 +72,53 @@ export default function SubmitComplaint() {
       });
       return;
     }
- 
+
     setUploadedImages(prev => [...prev, file]);
     // Reset input so the same file can be selected again
     e.target.value = '';
   };
- 
+
   const removeImage = (index: number) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
- 
-  const handleSubmit = () => {
-    if (!selectedCategory || !subject.trim() || !description.trim()) {
+
+  // Helper function to extract numeric ID from employee ID (e.g., "EMP001" -> 1)
+  const extractNumericId = (id: string): number => {
+    const numericPart = id.replace(/\D/g, '');
+    return parseInt(numericPart, 10) || 0;
+  };
+
+  // Helper function to get asset's numeric ID from assetId string
+  const getAssetNumericId = (assetIdString: string): number => {
+    const asset = myAssets.find(a => a.assetId === assetIdString);
+    if (asset) {
+      // Extract numeric part from asset.id (which is a string like "1", "2", etc.)
+      return parseInt(asset.id, 10) || 0;
+    }
+    return 0;
+  };
+
+  const handleSubmit = async () => {
+    // Validate required fields
+    if (!selectedCategory) {
+      toast({
+        title: "Missing Information",
+        description: "Please select an issue category.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!relatedAsset || relatedAsset === "none") {
+      toast({
+        title: "Missing Information",
+        description: "Please select a related asset. This field is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!subject.trim() || !description.trim()) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -89,7 +126,7 @@ export default function SubmitComplaint() {
       });
       return;
     }
- 
+
     if (subject.length > 100) {
       toast({
         title: "Subject too long",
@@ -98,7 +135,7 @@ export default function SubmitComplaint() {
       });
       return;
     }
- 
+
     if (description.length > 1000) {
       toast({
         title: "Description too long",
@@ -107,15 +144,37 @@ export default function SubmitComplaint() {
       });
       return;
     }
- 
-    toast({
-      title: "Complaint Submitted",
-      description: "Your complaint has been submitted. We'll get back to you soon.",
-    });
- 
-    navigate("/my-complaints");
+
+    setIsSubmitting(true);
+
+    try {
+      await employeeApis.submitAssetReplacement({
+        userId: extractNumericId(currentEmployee.id),
+        currentAssetId: getAssetNumericId(relatedAsset),
+        category: selectedCategory,
+        subject: subject.trim(),
+        description: description.trim(),
+        priority: priority.toLowerCase(),
+        image: uploadedImages.length > 0 ? uploadedImages[0] : undefined,
+      });
+
+      toast({
+        title: "Complaint Submitted",
+        description: "Your complaint has been submitted. We'll get back to you soon.",
+      });
+
+      navigate("/my-complaints");
+    } catch (error) {
+      toast({
+        title: "Submission Failed",
+        description: error instanceof Error ? error.message : "Failed to submit complaint. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
- 
+
   return (
     <MainLayout>
       <PageHeader
@@ -128,7 +187,7 @@ export default function SubmitComplaint() {
           </Button>
         }
       />
- 
+
       <div className="max-w-3xl space-y-6">
         {/* Category Selection */}
         <Card>
@@ -161,7 +220,7 @@ export default function SubmitComplaint() {
             </div>
           </CardContent>
         </Card>
- 
+
         {/* Image Upload */}
         <Card>
           <CardHeader>
@@ -188,7 +247,7 @@ export default function SubmitComplaint() {
                 <p className="text-xs text-muted-foreground mt-1">JPG, JPEG, PNG up to 5MB</p>
               </div>
             </div>
- 
+
             {/* Preview uploaded images */}
             {uploadedImages.length > 0 && (
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -212,7 +271,7 @@ export default function SubmitComplaint() {
             )}
           </CardContent>
         </Card>
- 
+
         {/* Subject */}
         <Card>
           <CardHeader>
@@ -229,7 +288,7 @@ export default function SubmitComplaint() {
             <p className="text-xs text-muted-foreground mt-2">{subject.length}/100 characters</p>
           </CardContent>
         </Card>
- 
+
         {/* Description */}
         <Card>
           <CardHeader>
@@ -248,21 +307,20 @@ export default function SubmitComplaint() {
             <p className="text-xs text-muted-foreground mt-2">{description.length}/1000 characters</p>
           </CardContent>
         </Card>
- 
-        {/* Related Asset */}
-        {myAssets.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Related Asset (Optional)</CardTitle>
-              <CardDescription>If this issue is related to a specific device</CardDescription>
-            </CardHeader>
-            <CardContent>
+
+        {/* Related Asset - Required */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Related Asset <span className="text-destructive">*</span></CardTitle>
+            <CardDescription>Select the device related to this issue</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {myAssets.length > 0 ? (
               <Select value={relatedAsset} onValueChange={setRelatedAsset}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an asset (optional)" />
+                  <SelectValue placeholder="Select an asset" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No specific asset</SelectItem>
                   {myAssets.map((asset) => (
                     <SelectItem key={asset.id} value={asset.assetId}>
                       {asset.assetId} - {asset.brand} {asset.model}
@@ -270,10 +328,12 @@ export default function SubmitComplaint() {
                   ))}
                 </SelectContent>
               </Select>
-            </CardContent>
-          </Card>
-        )}
- 
+            ) : (
+              <p className="text-sm text-muted-foreground">No assets assigned to you. Please contact IT support.</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Priority */}
         <Card>
           <CardHeader>
@@ -298,14 +358,23 @@ export default function SubmitComplaint() {
             </RadioGroup>
           </CardContent>
         </Card>
- 
+
         {/* Submit */}
         <div className="flex gap-3">
-          <Button onClick={handleSubmit} className="flex-1">
-            <Send className="w-4 h-4 mr-2" />
-            Submit Complaint
+          <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Submit Complaint
+              </>
+            )}
           </Button>
-          <Button variant="outline" onClick={() => navigate(-1)}>
+          <Button variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}>
             Cancel
           </Button>
         </div>

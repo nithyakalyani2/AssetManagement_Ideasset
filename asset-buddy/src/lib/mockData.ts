@@ -1,6 +1,6 @@
 export type AssetStatus = "available" | "assigned" | "repair" | "retired";
 export type RequestStatus = "pending" | "approved" | "rejected";
-export type ComplaintStatus = "open" | "in-progress" | "resolved" | "closed";
+export type ComplaintStatus = "open" | "in-progress" | "resolved" | "closed" | "rejected";
 export type ComplaintCategory =
   | "Hardware Issue"
   | "Software Issue"

@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import Inventory from "./pages/admin/Inventory";
 import Requests from "./pages/admin/Requests";
 import Employees from "./pages/admin/Employees";
+import AdminComplaints from "./pages/admin/Complaints";
 
 // Other pages
 import NotFound from "./pages/NotFound";
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/admin/requests" element={<Requests />} />
           <Route path="/admin/employees" element={<Employees />} />
           <Route path="/admin/asset-history" element={<AssetHistory />} />
+          <Route path="/admin/complaints" element={<AdminComplaints />} />
 
           {/* Fallback */}
           <Route path="*" element={<NotFound />} />
