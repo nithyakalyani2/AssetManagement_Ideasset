@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, Laptop, Wifi, Key, HelpCircle, Monitor, ImagePlus, X, Loader2 } from "lucide-react";
+import axios from "axios";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +18,40 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { assets, currentEmployee, ComplaintCategory } from "@/lib/mockData";
+import { ComplaintCategory } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
 import { employeeApis } from "@/api/employeeApis";
+import { useAuth } from "@/contexts/AuthContext";
+
+const API_BASE = "http://localhost:3000";
+
+// Interface for assignment API response
+interface AssignedAsset {
+  id: number;
+  assignmentType: string;
+  reason: string | null;
+  returnReason: string | null;
+  assignedAt: string;
+  endDate: string | null;
+  asset: {
+    id: number;
+    deviceType: string;
+    brand: string;
+    model: string;
+    serialNumber: string;
+    purchaseDate: string;
+    warrantyExpiryDate: string;
+    status: string;
+    condition: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
 
 const categories: { type: ComplaintCategory; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
   { type: "Hardware Issue", icon: Laptop, description: "Device problems" },
@@ -32,6 +64,8 @@ const categories: { type: ComplaintCategory; icon: React.ComponentType<{ classNa
 export default function SubmitComplaint() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+
   const [selectedCategory, setSelectedCategory] = useState<ComplaintCategory | null>(null);
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -39,7 +73,36 @@ export default function SubmitComplaint() {
   const [relatedAsset, setRelatedAsset] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const myAssets = assets.filter(asset => asset.assignedTo?.id === currentEmployee.id);
+  // Assets from API
+  const [assignedAssets, setAssignedAssets] = useState<AssignedAsset[]>([]);
+  const [loadingAssets, setLoadingAssets] = useState(true);
+
+  // Fetch assigned assets on mount
+  useEffect(() => {
+    const fetchAssignedAssets = async () => {
+      if (!user?.id) {
+        setLoadingAssets(false);
+        return;
+      }
+
+      try {
+        setLoadingAssets(true);
+        const response = await axios.get(`${API_BASE}/assignments/user/${user.id}`);
+        setAssignedAssets(response.data);
+      } catch (error) {
+        console.error("Failed to fetch assigned assets:", error);
+        toast({
+          title: "Failed to load assets",
+          description: "Could not load your assigned assets. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingAssets(false);
+      }
+    };
+
+    fetchAssignedAssets();
+  }, [user?.id]);
 
   // Image upload state and handlers
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
@@ -82,22 +145,6 @@ export default function SubmitComplaint() {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Helper function to extract numeric ID from employee ID (e.g., "EMP001" -> 1)
-  const extractNumericId = (id: string): number => {
-    const numericPart = id.replace(/\D/g, '');
-    return parseInt(numericPart, 10) || 0;
-  };
-
-  // Helper function to get asset's numeric ID from assetId string
-  const getAssetNumericId = (assetIdString: string): number => {
-    const asset = myAssets.find(a => a.assetId === assetIdString);
-    if (asset) {
-      // Extract numeric part from asset.id (which is a string like "1", "2", etc.)
-      return parseInt(asset.id, 10) || 0;
-    }
-    return 0;
-  };
-
   const handleSubmit = async () => {
     // Validate required fields
     if (!selectedCategory) {
@@ -109,7 +156,7 @@ export default function SubmitComplaint() {
       return;
     }
 
-    if (!relatedAsset || relatedAsset === "none") {
+    if (!relatedAsset) {
       toast({
         title: "Missing Information",
         description: "Please select a related asset. This field is required.",
@@ -149,8 +196,8 @@ export default function SubmitComplaint() {
 
     try {
       await employeeApis.submitAssetReplacement({
-        userId: extractNumericId(currentEmployee.id),
-        currentAssetId: getAssetNumericId(relatedAsset),
+        userId: user?.id || 0,
+        currentAssetId: parseInt(relatedAsset, 10),
         category: selectedCategory,
         subject: subject.trim(),
         description: description.trim(),
@@ -192,7 +239,7 @@ export default function SubmitComplaint() {
         {/* Category Selection */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Issue Category</CardTitle>
+            <CardTitle className="text-base">Issue Category <span className="text-destructive">*</span></CardTitle>
             <CardDescription>Select the type of issue you're experiencing</CardDescription>
           </CardHeader>
           <CardContent>
@@ -275,7 +322,7 @@ export default function SubmitComplaint() {
         {/* Subject */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Subject</CardTitle>
+            <CardTitle className="text-base">Subject <span className="text-destructive">*</span></CardTitle>
             <CardDescription>Briefly describe the issue (max 100 characters)</CardDescription>
           </CardHeader>
           <CardContent>
@@ -292,7 +339,7 @@ export default function SubmitComplaint() {
         {/* Description */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Description</CardTitle>
+            <CardTitle className="text-base">Description <span className="text-destructive">*</span></CardTitle>
             <CardDescription>Provide details about the issue (max 1000 characters)</CardDescription>
           </CardHeader>
           <CardContent>
@@ -315,15 +362,20 @@ export default function SubmitComplaint() {
             <CardDescription>Select the device related to this issue</CardDescription>
           </CardHeader>
           <CardContent>
-            {myAssets.length > 0 ? (
+            {loadingAssets ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Loading your assets...</span>
+              </div>
+            ) : assignedAssets.length > 0 ? (
               <Select value={relatedAsset} onValueChange={setRelatedAsset}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select an asset" />
                 </SelectTrigger>
                 <SelectContent>
-                  {myAssets.map((asset) => (
-                    <SelectItem key={asset.id} value={asset.assetId}>
-                      {asset.assetId} - {asset.brand} {asset.model}
+                  {assignedAssets.map((assignment) => (
+                    <SelectItem key={assignment.asset.id} value={assignment.asset.id.toString()}>
+                      {assignment.asset.deviceType} - {assignment.asset.brand} {assignment.asset.model} ({assignment.asset.serialNumber})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -337,7 +389,7 @@ export default function SubmitComplaint() {
         {/* Priority */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Priority Level</CardTitle>
+            <CardTitle className="text-base">Priority Level <span className="text-destructive">*</span></CardTitle>
             <CardDescription>How urgent is this issue?</CardDescription>
           </CardHeader>
           <CardContent>
